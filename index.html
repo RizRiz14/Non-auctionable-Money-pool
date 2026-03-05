@@ -1,0 +1,323 @@
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Non-auctionable Money Pool</title>
+
+<style>
+
+body{
+font-family:Arial;
+text-align:center;
+background:#0b0b0b;
+color:white;
+margin:0;
+padding:10px;
+}
+
+h1{
+margin-top:5px;
+}
+
+#wheelContainer{
+position:relative;
+width:90vw;
+max-width:600px;
+margin:auto;
+}
+
+canvas{
+width:100%;
+height:auto;
+background:white;
+border-radius:50%;
+}
+
+#arrow{
+position:absolute;
+top:-12px;
+left:50%;
+transform:translateX(-50%);
+font-size:45px;
+color:red;
+}
+
+button{
+padding:12px 18px;
+margin:6px;
+font-size:15px;
+cursor:pointer;
+border:none;
+border-radius:6px;
+}
+
+#loadBtn{background:#007bff;color:white;}
+#spinBtn{background:#28a745;color:white;}
+#resetBtn{background:#dc3545;color:white;}
+#fullBtn{background:#6f42c1;color:white;}
+
+textarea{
+width:90%;
+max-width:500px;
+height:120px;
+margin-top:10px;
+font-size:14px;
+}
+
+#winnerBox{
+margin-top:15px;
+font-size:24px;
+color:#ffd700;
+font-weight:bold;
+}
+
+#history{
+margin-top:20px;
+max-width:600px;
+margin-left:auto;
+margin-right:auto;
+text-align:left;
+font-size:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Non-auctionable Money Pool</h1>
+
+<div id="wheelContainer">
+
+<canvas id="wheel" width="600" height="600"></canvas>
+
+</div>
+
+<br>
+
+<button id="loadBtn">LOAD NAMES</button>
+<button id="spinBtn">SPIN</button>
+<button id="resetBtn">RESET</button>
+<button id="fullBtn">FULLSCREEN</button>
+
+<br>
+
+<textarea id="namesInput" placeholder="Enter names (one per line)"></textarea>
+
+<br><br>
+
+<input type="file" id="fileInput">
+
+<div id="winnerBox"></div>
+
+<div id="history">
+<h3>Lot History:</h3>
+<ul id="historyList"></ul>
+</div>
+
+<script>
+
+let canvas=document.getElementById("wheel")
+let ctx=canvas.getContext("2d")
+
+let names=[]
+let angle=0
+let spinning=false
+
+function randomColor(){
+
+let r=Math.floor(Math.random()*200)
+let g=Math.floor(Math.random()*200)
+let b=Math.floor(Math.random()*200)
+
+return "rgb("+r+","+g+","+b+")"
+
+}
+
+function loadNames(){
+
+let text=document.getElementById("namesInput").value.trim()
+
+if(text===""){
+alert("Please enter names")
+return
+}
+
+names=text.split("\n").filter(n=>n.trim()!="")
+
+drawWheel()
+
+document.getElementById("winnerBox").innerText=
+"Names Loaded: "+names.length
+
+}
+
+function drawWheel(){
+
+if(names.length==0)return
+
+let size=canvas.width/2
+let arc=(2*Math.PI)/names.length
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+names.forEach((name,i)=>{
+
+let angleStart=i*arc+angle
+
+ctx.beginPath()
+
+ctx.moveTo(size,size)
+
+ctx.arc(size,size,size,angleStart,angleStart+arc)
+
+ctx.fillStyle=randomColor()
+
+ctx.fill()
+
+ctx.save()
+
+ctx.translate(size,size)
+
+ctx.rotate(angleStart+arc/2)
+
+ctx.textAlign="center"
+ctx.fillStyle="black"
+ctx.font="16px Arial"
+
+ctx.translate(size*0.7,0)
+
+ctx.rotate(-angleStart-arc/2)
+
+ctx.fillText(name,0,0)
+
+ctx.restore()
+
+})
+
+}
+
+function spin(){
+
+if(spinning||names.length==0)return
+
+spinning=true
+
+let spinAngle=Math.random()*6*Math.PI+10*Math.PI
+
+let start=performance.now()
+
+function animate(now){
+
+let progress=(now-start)/4000
+
+if(progress>1)progress=1
+
+let ease=1-Math.pow(1-progress,3)
+
+angle=spinAngle*ease
+
+drawWheel()
+
+if(progress<1){
+
+requestAnimationFrame(animate)
+
+}else{
+
+finishSpin()
+
+}
+
+}
+
+requestAnimationFrame(animate)
+
+}
+
+function finishSpin(){
+
+let arc=(2*Math.PI)/names.length
+
+let degrees=angle%(2*Math.PI)
+
+let index=Math.floor((2*Math.PI-degrees)/arc)%names.length
+
+let winner=names[index]
+
+document.getElementById("winnerBox").innerText="Chit Alloted: "+winner
+
+addHistory(winner)
+
+names.splice(index,1)
+
+drawWheel()
+
+spinning=false
+
+}
+
+function addHistory(name){
+
+let now=new Date()
+
+let date=now.toLocaleDateString()
+
+let month=now.toLocaleString('default',{month:'long'})
+
+let li=document.createElement("li")
+
+li.textContent=name+" - "+date+" ("+month+")"
+
+document.getElementById("historyList").appendChild(li)
+
+}
+
+function reset(){
+
+names=[]
+angle=0
+
+document.getElementById("namesInput").value=""
+document.getElementById("winnerBox").innerText=""
+document.getElementById("historyList").innerHTML=""
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+}
+
+document.getElementById("fileInput").addEventListener("change",function(e){
+
+let file=e.target.files[0]
+
+let reader=new FileReader()
+
+reader.onload=function(){
+
+let rows=reader.result.split("\n")
+
+document.getElementById("namesInput").value=rows.join("\n")
+
+}
+
+reader.readAsText(file)
+
+})
+
+document.getElementById("fullBtn").onclick=function(){
+
+document.documentElement.requestFullscreen()
+
+}
+
+document.getElementById("loadBtn").onclick=loadNames
+document.getElementById("spinBtn").onclick=spin
+document.getElementById("resetBtn").onclick=reset
+
+</script>
+
+</body>
+</html>
