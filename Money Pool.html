@@ -1,0 +1,217 @@
+<html>
+<head>
+<title>Money Pool</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center;
+}
+
+textarea{
+width:320px;
+height:140px;
+padding:10px;
+border-radius:8px;
+}
+
+button{
+padding:10px 20px;
+margin:8px;
+font-size:16px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+#spin{background:#22c55e;color:white;}
+#reset{background:#ef4444;color:white;}
+
+canvas{
+background:#111827;
+border-radius:50%;
+margin-top:10px;
+}
+
+#winner{
+font-size:26px;
+margin-top:10px;
+font-weight:bold;
+}
+
+#history{
+margin-top:10px;
+max-height:120px;
+overflow:auto;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>₹ Money Pool ₹</h2>
+
+<p>Enter names (one per line)</p>
+
+<textarea id="names">
+</textarea>
+<br>
+
+<button onclick="loadNames()">Load Names</button>
+<button id="spin" onclick="spin()">Spin</button>
+<button id="reset" onclick="resetWheel()">Reset</button>
+
+<div class="pointer"></div>
+
+<canvas id="wheel" width="500" height="500"></canvas>
+
+<div id="winner"></div>
+
+<h3>Lot History:</h3>
+<div id="history"></div>
+
+<script>
+
+let names=[]
+let startAngle=0
+let spinning=false
+
+let canvas=document.getElementById("wheel")
+let ctx=canvas.getContext("2d")
+
+function loadNames(){
+
+names=document.getElementById("names").value.split("\n").filter(n=>n.trim()!="")
+
+startAngle=0
+
+drawWheel()
+
+}
+
+function drawWheel(){
+
+ctx.clearRect(0,0,500,500)
+
+if(names.length==0) return
+
+let arc=(2*Math.PI)/names.length
+
+let fontSize=Math.min(18,400/names.length+8)
+
+for(let i=0;i<names.length;i++){
+
+let angle=startAngle+i*arc
+
+ctx.beginPath()
+ctx.moveTo(250,250)
+ctx.arc(250,250,240,angle,angle+arc)
+
+ctx.fillStyle="hsl("+i*360/names.length+",70%,55%)"
+ctx.fill()
+
+ctx.save()
+
+ctx.translate(250,250)
+ctx.rotate(angle+arc/2)
+
+ctx.fillStyle="white"
+ctx.textAlign="right"
+ctx.font=fontSize+"px Arial"
+
+let displayName=names[i].length>14?names[i].substring(0,14)+"…":names[i]
+
+ctx.fillText(displayName,210,5)
+
+ctx.restore()
+
+}
+
+}
+
+function spin(){
+
+if(spinning || names.length==0) return
+
+spinning=true
+
+let spinAngle=Math.random()*3000+3000
+
+let duration=5000
+let start=null
+
+function animate(t){
+
+if(!start) start=t
+
+let progress=t-start
+
+startAngle=(spinAngle*(progress/duration))*Math.PI/180
+
+drawWheel()
+
+if(progress<duration){
+
+requestAnimationFrame(animate)
+
+}else{
+
+spinning=false
+pickWinner()
+
+}
+
+}
+
+requestAnimationFrame(animate)
+
+}
+
+function pickWinner(){
+
+let degrees=(startAngle*180/Math.PI+90)%360
+let slice=360/names.length
+
+let index=Math.floor((360-degrees + slice/2)/slice)%names.length
+
+let winner=names[index]
+
+document.getElementById("winner").innerHTML="Chit Alloted: "+winner
+
+let now = new Date()
+let month = now.toLocaleString('default', { month: 'short' })
+
+let entry = winner + " — " + month + " " + now.getDate() + ", " + now.getFullYear() +
+" " + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+
+document.getElementById("history").innerHTML += entry + "<br>"
+
+names.splice(index,1)
+
+drawWheel()
+
+}
+
+function resetWheel(){
+
+startAngle=0
+
+document.getElementById("chit").innerHTML=""
+document.getElementById("alloted").innerHTML=""
+
+loadNames()
+
+}
+
+loadNames()
+
+</script>
+
+</body>
+
+</html>
